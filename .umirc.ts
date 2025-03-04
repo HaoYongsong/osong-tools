@@ -5,7 +5,6 @@ export default defineConfig({
   history: {
     type: 'hash',
   },
-  outputPath: 'docs',
   antd: {},
   access: {},
   model: {},
@@ -46,6 +45,8 @@ export default defineConfig({
       ],
     },
   ],
+  esbuildMinifyIIFE: true,
+  outputPath: 'docs',
   npmClient: 'yarn',
   mdx: {
     loader: '@mdx-js/loader',
