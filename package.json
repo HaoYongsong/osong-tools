@@ -13,10 +13,13 @@
   "dependencies": {
     "@ant-design/icons": "^5.0.1",
     "@ant-design/pro-components": "^2.4.4",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@mdx-js/loader": "^3.1.0",
     "@mdx-js/react": "^3.1.0",
     "@umijs/max": "^4.4.6",
     "@umijs/plugin-docs": "^4.4.6",
+    "@wavesurfer/react": "^1.0.9",
     "add": "^2.0.6",
     "antd": "^5.4.0",
     "babel-loader": "^10.0.0",
@@ -30,6 +33,7 @@
     "remark-directive": "^4.0.0",
     "remark-frontmatter": "^5.0.0",
     "remark-gfm": "^4.0.1",
+    "wavesurfer.js": "^7.9.1",
     "yarn": "^1.22.22"
   },
   "devDependencies": {
