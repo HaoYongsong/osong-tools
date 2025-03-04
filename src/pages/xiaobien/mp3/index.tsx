@@ -1,6 +1,4 @@
 import { DragSortTable, PageContainer } from '@ant-design/pro-components';
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { useRequest } from '@umijs/max';
 import { useWavesurfer } from '@wavesurfer/react';
 import { Button, Input, InputNumber, Space, Spin } from 'antd';
@@ -10,8 +8,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Hover from 'wavesurfer.js/dist/plugins/hover.esm.js';
 import Regions, { Region } from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import Timeline from 'wavesurfer.js/dist/plugins/timeline.esm.js';
-import { FFMPEG_PATH, WAVESURFER_HOVER_OPTION, WAVESURFER_OPTION, WAVESURFER_TIMELINE_OPTION } from './constant';
-import { formatSecondsWithDate } from './utils';
+import { WAVESURFER_HOVER_OPTION, WAVESURFER_OPTION, WAVESURFER_TIMELINE_OPTION } from './constant';
+import { download, ffmpegSplitMP3, formatSecondsWithDate } from './utils';
 
 interface CutAudioItem {
   startTime: string;
@@ -20,6 +18,7 @@ interface CutAudioItem {
   end: number;
   url: string;
   name?: string;
+  audio: { file: any; url: string };
 }
 
 function useWavesurferInit() {
@@ -45,7 +44,7 @@ const HomePage: React.FC = () => {
 
   const [region, setRegion] = useState<Region | null>(null);
 
-  const [audio, setAudio] = useState<string | null>(null);
+  const [audio, setAudio] = useState<{ url: string; file: any } | null>(null);
 
   useEffect(() => {
     if (!wavesurfer) return;
@@ -73,7 +72,7 @@ const HomePage: React.FC = () => {
     regions.clearRegions();
 
     const url = URL.createObjectURL(file);
-    setAudio(url);
+    setAudio({ file, url });
     wavesurfer?.load?.(url);
   }
 
@@ -96,26 +95,11 @@ const HomePage: React.FC = () => {
         return;
       }
 
-      // 初始化 FFmpeg
-      const ffmpeg = new FFmpeg();
-      // 设置日志处理
-      ffmpeg.on('log', ({ message }) => console.log(message));
-      // 设置进度处理
-      ffmpeg.on('progress', ({ progress, time }) => console.info(`${progress * 100} %, time: ${time / 1000000} s`));
-      // 加载 FFmpeg 核心
+      const url = await ffmpegSplitMP3(audio?.url as string, startTime, endTime);
 
-      await ffmpeg.load({
-        coreURL: await toBlobURL(`${FFMPEG_PATH}/ffmpeg-core.js`, 'text/javascript'),
-        wasmURL: await toBlobURL(`${FFMPEG_PATH}/ffmpeg-core.wasm`, 'application/wasm'),
-      });
-      await ffmpeg.writeFile('input.mp3', await fetchFile(audio!));
+      console.log(audio);
 
-      await ffmpeg.exec(['-i', 'input.mp3', '-ss', startTime, '-to', endTime, '-acodec', 'copy', 'output.mp3']);
-
-      const data = await ffmpeg.readFile('output.mp3');
-      const url = URL.createObjectURL(new Blob([(data as any).buffer], { type: 'audio/mpeg' }));
-
-      setDataSource((prev) => [...prev, { url, start, end, startTime, endTime }]);
+      setDataSource((prev) => [...prev, { url, start, end, startTime, endTime, audio: audio! }]);
     },
     { manual: true },
   );
@@ -159,9 +143,16 @@ const HomePage: React.FC = () => {
           })}
           columns={[
             { title: '排序', dataIndex: 'sort', width: 80 },
+            { title: '源文件', dataIndex: ['audio', 'file', 'name'] },
             { title: 'Start Time', dataIndex: 'startTime' },
             { title: 'End Time', dataIndex: 'endTime' },
-            { title: 'Audio', dataIndex: 'url', render: (_, record) => <audio src={record.url} controls /> },
+            {
+              title: 'Audio',
+              dataIndex: 'url',
+              render: (_, record) => {
+                return <audio src={record.url} controls />;
+              },
+            },
             {
               title: 'File',
               dataIndex: 'name',
@@ -172,19 +163,9 @@ const HomePage: React.FC = () => {
               dataIndex: 'action',
               render: (_, record) => (
                 <Space>
+                  <Button onClick={() => download(record as any)}>Download</Button>
                   <Button
-                    onClick={() => {
-                      const link = document.createElement('a');
-                      link.href = record.url;
-                      link.download = record.name!;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                    }}
-                  >
-                    Download
-                  </Button>
-                  <Button
+                    disabled={audio?.url !== record?.audio?.url}
                     onClick={() => {
                       if (!!regionCacheRef.current?.[record?.url]) {
                         regionCacheRef.current?.[record?.url]?.remove?.();
