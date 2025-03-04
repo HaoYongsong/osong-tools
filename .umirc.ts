@@ -1,6 +1,10 @@
 import { defineConfig } from '@umijs/max';
 
 export default defineConfig({
+  publicPath: process.env.NODE_ENV === 'production' ? './' : '/',
+  history: {
+    type: 'hash',
+  },
   antd: {},
   access: {},
   model: {},
@@ -25,10 +29,50 @@ export default defineConfig({
       component: './Access',
     },
     {
-      name: ' CRUD 示例',
-      path: '/table',
-      component: './Table',
+      name: '小彼恩',
+      path: '/xiaobien',
+      routes: [
+        {
+          name: 'MP3切割',
+          path: '/xiaobien/mp3',
+          component: './xiaobien/mp3',
+        },
+        {
+          name: '文档',
+          path: '/xiaobien/doc',
+          component: './xiaobien/README.mdx',
+        },
+      ],
     },
   ],
   npmClient: 'yarn',
+  mdx: {
+    loader: '@mdx-js/loader',
+    loaderOptions: {
+      // providerImportSource: '@mdx-js/react',
+      // remarkPlugins: [
+      //   remarkParse,
+      //   remarkFrontmatter,
+      //   remarkDirective,
+      //   remarkBreaks,
+      //   remarkGfm,
+      // ],
+      // rehypePlugins: [
+      //   rehypeAutolinkHeadings,
+      //   rehypeRemoveComments,
+      //   [rehypePrismPlus, { ignoreMissing: true }],
+      //   [
+      //     rehypeExternalLinks,
+      //     {
+      //       target(element: Element) {
+      //         return element.properties &&
+      //           /^https?:\/\//.test(`${element.properties!.href}`)
+      //           ? '_blank'
+      //           : undefined;
+      //       },
+      //     },
+      //   ],
+      // ],
+    },
+  },
 });
