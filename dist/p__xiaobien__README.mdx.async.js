@@ -1,0 +1,2 @@
+"use strict";(self.webpackChunk=self.webpackChunk||[]).push([[447],{67354:function(a,t,o){o.r(t),o.d(t,{default:function(){return d}});var l=o(97857),_=o.n(l),e=o(85893);function r(n){var s=_()({h1:"h1"},n.components);return(0,e.jsxs)(e.Fragment,{children:[(0,e.jsx)(s.h1,{children:"About"}),`
+`,(0,e.jsx)("div",{children:"Hello"})]})}function d(){var n=arguments.length>0&&arguments[0]!==void 0?arguments[0]:{},s=n.components||{},u=s.wrapper;return u?(0,e.jsx)(u,_()(_()({},n),{},{children:(0,e.jsx)(r,_()({},n))})):r(n)}}}]);
