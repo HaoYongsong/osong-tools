@@ -1,16 +1,26 @@
-import { PageContainer, ProTable } from '@ant-design/pro-components';
+import { DragSortTable, PageContainer } from '@ant-design/pro-components';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { useRequest } from '@umijs/max';
 import { useWavesurfer } from '@wavesurfer/react';
-import { Button, Input, Space, Spin } from 'antd';
+import { Button, Input, InputNumber, Space, Spin } from 'antd';
 import ButtonGroup from 'antd/es/button/button-group';
+import Handlebars from 'handlebars';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Hover from 'wavesurfer.js/dist/plugins/hover.esm.js';
 import Regions, { Region } from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import Timeline from 'wavesurfer.js/dist/plugins/timeline.esm.js';
 import { FFMPEG_PATH, WAVESURFER_HOVER_OPTION, WAVESURFER_OPTION, WAVESURFER_TIMELINE_OPTION } from './constant';
 import { formatSecondsWithDate } from './utils';
+
+interface CutAudioItem {
+  startTime: string;
+  endTime: string;
+  start: number;
+  end: number;
+  url: string;
+  name?: string;
+}
 
 function useWavesurferInit() {
   const containerRef = useRef(null);
@@ -31,7 +41,7 @@ function useWavesurferInit() {
 const HomePage: React.FC = () => {
   const { wavesurfer, isPlaying, containerRef, regions } = useWavesurferInit();
 
-  const regionCacheRef = useRef<Record<string, Region>>({});
+  const regionCacheRef = useRef<Record<string, Region | undefined>>({});
 
   const [region, setRegion] = useState<Region | null>(null);
 
@@ -67,7 +77,7 @@ const HomePage: React.FC = () => {
     wavesurfer?.load?.(url);
   }
 
-  const [dataSource, setDataSource] = useState<any[]>([]);
+  const [dataSource, setDataSource] = useState<CutAudioItem[]>([]);
 
   const { loading, run } = useRequest(
     async () => {
@@ -86,8 +96,6 @@ const HomePage: React.FC = () => {
         return;
       }
 
-      console.log(1);
-
       // 初始化 FFmpeg
       const ffmpeg = new FFmpeg();
       // 设置日志处理
@@ -102,20 +110,22 @@ const HomePage: React.FC = () => {
       });
       await ffmpeg.writeFile('input.mp3', await fetchFile(audio!));
 
-      // 调用 FFmpeg 命令进行切割
-      console.time('exec');
       await ffmpeg.exec(['-i', 'input.mp3', '-ss', startTime, '-to', endTime, '-acodec', 'copy', 'output.mp3']);
-      console.timeEnd('exec');
 
       const data = await ffmpeg.readFile('output.mp3');
       const url = URL.createObjectURL(new Blob([(data as any).buffer], { type: 'audio/mpeg' }));
-
-      console.log('🚀 ~ url:', url);
 
       setDataSource((prev) => [...prev, { url, start, end, startTime, endTime }]);
     },
     { manual: true },
   );
+
+  const handleDragSortEnd = (beforeIndex: number, afterIndex: number, newDataSource: CutAudioItem[]) => {
+    setDataSource(newDataSource);
+  };
+
+  const [starNumber, setStartNumber] = useState(1);
+  const [name, setName] = useState('RE.{{index}}.mp3');
 
   return (
     <PageContainer ghost>
@@ -125,20 +135,38 @@ const HomePage: React.FC = () => {
           <Input style={{ marginTop: 24 }} type="file" id="uploader" accept="audio/mpeg" onChange={onFileChange} />
         </div>
 
-        <ButtonGroup style={{ marginTop: 24, marginBottom: 24 }}>
-          <Button onClick={() => wavesurfer?.playPause()}>{isPlaying ? 'Pause' : 'Play'}</Button>
-          <Button onClick={run}>Cut</Button>
-        </ButtonGroup>
+        <Space style={{ marginTop: 24, marginBottom: 24 }}>
+          <ButtonGroup>
+            <Button onClick={() => wavesurfer?.playPause()}>{isPlaying ? 'Pause' : 'Play'}</Button>
+            <Button onClick={run}>Cut</Button>
+          </ButtonGroup>
+          <Input value={name} onChange={(e) => setName(e.target.value)} />
+          <InputNumber<number> min={1} value={starNumber} onChange={(v) => setStartNumber(v!)} />
+        </Space>
 
-        <ProTable<any>
+        <DragSortTable<CutAudioItem>
           rowKey="url"
           search={false}
           toolBarRender={false}
-          dataSource={dataSource}
+          dataSource={dataSource.map((item, index) => {
+            return {
+              ...item,
+              name: Handlebars.compile(name)({
+                ...item,
+                index: index + starNumber,
+              }),
+            };
+          })}
           columns={[
+            { title: '排序', dataIndex: 'sort', width: 80 },
             { title: 'Start Time', dataIndex: 'startTime' },
             { title: 'End Time', dataIndex: 'endTime' },
             { title: 'Audio', dataIndex: 'url', render: (_, record) => <audio src={record.url} controls /> },
+            {
+              title: 'File',
+              dataIndex: 'name',
+            },
+
             {
               title: 'Action',
               dataIndex: 'action',
@@ -148,7 +176,7 @@ const HomePage: React.FC = () => {
                     onClick={() => {
                       const link = document.createElement('a');
                       link.href = record.url;
-                      link.download = `cut_audio_${(record.startTime, record.endTime)}.mp3`;
+                      link.download = record.name!;
                       document.body.appendChild(link);
                       link.click();
                       document.body.removeChild(link);
@@ -160,7 +188,7 @@ const HomePage: React.FC = () => {
                     onClick={() => {
                       if (!!regionCacheRef.current?.[record?.url]) {
                         regionCacheRef.current?.[record?.url]?.remove?.();
-                        regionCacheRef.current = regionCacheRef.current = {
+                        regionCacheRef.current = {
                           ...regionCacheRef.current,
                           [record?.url]: undefined,
                         };
@@ -192,6 +220,8 @@ const HomePage: React.FC = () => {
               ),
             },
           ]}
+          dragSortKey="sort"
+          onDragSortEnd={handleDragSortEnd}
         />
       </Spin>
     </PageContainer>
