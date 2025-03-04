@@ -5,6 +5,7 @@ export default defineConfig({
   history: {
     type: 'hash',
   },
+  outputPath: 'docs',
   antd: {},
   access: {},
   model: {},

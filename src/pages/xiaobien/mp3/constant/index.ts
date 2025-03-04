@@ -20,11 +20,3 @@ export const WAVESURFER_HOVER_OPTION = {
   labelColor: '#fff',
   labelSize: '11px',
 };
-
-const Colors = [
-  '#E5F6FF', // 淡蓝色
-  '#FFF6CC', // 淡黄色
-  '#FFE5F6', // 淡粉色
-  '#E5FFF6', // 淡绿色
-  '#F6E5FF', // 淡紫色
-];
